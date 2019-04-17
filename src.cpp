@@ -39,7 +39,7 @@ int main()
 	int count_location = Count_location(a);
 	cout << P(Center_area(a), a, b, 56,count_location)<<endl;
 	waitKey(0);*/
-	afm_src = imread("\images\\Square_gray.png");
+	afm_src = imread("\images\\Ellipse_gray.png");
 	Optical_src = imread("\images\\Optical_image.png");
 	flip(afm_src,afm_src, 1);
 	//GaussianBlur(dst, dst, Size(7, 7), 0, 0);
@@ -67,8 +67,8 @@ int main()
 	minMaxIdx(afm_dst, afm_minp, afm_maxp);
 	minMaxIdx(Optical_dst, optical_minp, optical_maxp);
 
-	threshold(afm_dst, afm_dst, afm_max / 2 + 20, 255, CV_THRESH_BINARY);
-	threshold(Optical_dst, Optical_dst, optical_max / 2 + 20, 255, CV_THRESH_BINARY);
+	threshold(afm_dst, afm_dst, afm_max / 2 + 24, 255, CV_THRESH_BINARY);
+	threshold(Optical_dst, Optical_dst, optical_max / 2 + 24, 255, CV_THRESH_BINARY);
 
 
 	imshow("two value", afm_dst);
@@ -77,9 +77,9 @@ int main()
 
 	vector<Point> Matching_center;
 	vector<double> Score;
-	for(int j=0;j<600;j+=5)
+	for(int j=0;j<600;j+=2)
 	{
-		for(int i=0;i<700;i+=5)
+		for(int i=0;i<700;i+=2)
 		{
 			Rect rect(i, j, 56, 56);
 			if (Angle_sum(Optical_dst(rect)) != 0)
@@ -100,7 +100,7 @@ int main()
 		}
 	}
 	double min_score=Score[0];
-	int min_index;
+	int min_index=0;
 	for(int i=0;i<Score.size();i++)
 	{
 		if (Score[i] < min_score)
@@ -109,16 +109,18 @@ int main()
 			min_index = i;
 		}
 	}
+	
 	for (int i = 0; i < Matching_center.size(); i++)
 	{
 		cout << "the " << i << " center point: " << Matching_center[i].x << ", " << Matching_center[i].y << endl;
 		cout << "the score is: " << Score[i] << endl;
 	}
+
 	circle(Optical_src, Matching_center[min_index], 2, Scalar(0, 0, 255), 2);
 	rectangle(Optical_src, Point(Matching_center[min_index].x-27, Matching_center[min_index].y-27), Point(Matching_center[min_index].x + 27, Matching_center[min_index].y + 27), Scalar(0, 0, 255), 1, 8, 0);
 
 	imshow("optical_dst", Optical_src);
-	imwrite("Matching result.png", Optical_src);
+	imwrite("Matching result2.png", Optical_src);
 
 	waitKey(0);
 	return 0;
@@ -596,16 +598,23 @@ double P(int *center_area,Mat image_a,Mat image_b,int size,int len)
 			break;
 		}
 	}
+	
+	
 	for (int i = 0; i < len; i++)
-	{
-		cout << score_sim[i] << " ";
-	}
+		{
+			cout << score_sim[i] << " ";
+		}
+	
 	cout << endl;
 	double area_sum = 0;
+	
+	
 	for (int i = 0; i < score_sim.size(); i++)
-	{
-		area_sum += score_sim[i];
-	}
+		{
+			area_sum += score_sim[i];
+		}
+	
+	
 	return area_sum/score_sim.size();
 }
 
@@ -616,42 +625,49 @@ double Angle_sum(Mat dst)
 	vector<vector<Point>> contours;
 	vector<Vec4i> hierarchy;
 	vector<Point> meanpoints;
+
 	findContours(dst, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point());
 	Mat imageContours = Mat::zeros(dst.size(), CV_8UC1);
 	Mat Contours = Mat::zeros(dst.size(), CV_8UC1);
 	Mat Separated = Mat::zeros(dst.size(), CV_8UC1);
-	for (int i = 0; i < contours.size(); i++)
+	/*if (contours.size() != 0)
 	{
-		for (int j = 0; j < contours[i].size(); j++)
+		for (int i = 0; i < contours.size(); i++)
 		{
-			Point P = Point(contours[i][j].x, contours[i][j].y);
-			Contours.at<uchar>(P) = 255;
+			for (int j = 0; j < contours[i].size(); j++)
+			{
+				Point P = Point(contours[i][j].x, contours[i][j].y);
+				Contours.at<uchar>(P) = 255;
+			}
+			drawContours(imageContours, contours, i, Scalar(255), 1, 8, hierarchy);
 		}
-		drawContours(imageContours, contours, i, Scalar(255), 1, 8, hierarchy);
-	}
+	}*/
 	//imshow("contour image", imageContours);
 	//imwrite("contour image.png", imageContours);
 	//imshow("point of contours", Contours);
 	//imwrite("point of contours.png", Contours);
 	
+	
 	for (int i = 1; i < contours.size(); i++)
-	{
-		cout << "the size of " << i << " contour is: " << contours[i].size() << endl;
-		int sum_x = 0;
-		int sum_y = 0;
-		Point meanpoint;
-		for (int j = 0; j < contours[i].size(); j++)
 		{
-			sum_x += contours[i][j].x;
-			sum_y += contours[i][j].y;
+			cout << "the size of " << i << " contour is: " << contours[i].size() << endl;
+			int sum_x = 0;
+			int sum_y = 0;
+			Point meanpoint;
+			for (int j = 0; j < contours[i].size(); j++)
+			{
+				sum_x += contours[i][j].x;
+				sum_y += contours[i][j].y;
+			}
+			meanpoint = Point(sum_x / contours[i].size(), sum_y / contours[i].size());
+			if (contours[i].size() > 8)
+			{
+				meanpoints.push_back(meanpoint);
+			}
+			else continue;
 		}
-		meanpoint = Point(sum_x / contours[i].size(), sum_y / contours[i].size());
-		if (contours[i].size() > 10)
-		{
-			meanpoints.push_back(meanpoint);
-		}
-		else continue;
-	}
+	
+	
 	
 	{
 		y_0 = dst.rows / 3;
@@ -687,6 +703,7 @@ double Angle_sum(Mat dst)
 
 	///////////////////////////////////////computer the center
 	vector<Point> MeanPoints;
+
 	y_0 = dst.rows / 3;
 	y2 = dst.rows * 2 / 3;
 	y3 = dst.rows - 1;
@@ -698,92 +715,96 @@ double Angle_sum(Mat dst)
 	int sum_y[9] = { 0,0,0,0,0,0,0,0,0 };
 	int sum_num[9] = { 0,0,0,0,0,0,0,0,0 };
 
+	
+
 	for (int i = 0; i < meanpoints.size(); i++)
-	{
-		if (meanpoints[i].x < x1)
 		{
-			if (meanpoints[i].y < y_0)
-			{
-				sum_x[3] += meanpoints[i].x;
-				sum_y[3] += meanpoints[i].y;
-				sum_num[3]++;
-			}
-			else
-			{
-				if (meanpoints[i].y < y2)
-				{
-
-					sum_x[4] += meanpoints[i].x;
-					sum_y[4] += meanpoints[i].y;
-					sum_num[4]++;
-				}
-				else
-				{
-
-					sum_x[5] += meanpoints[i].x;
-					sum_y[5] += meanpoints[i].y;
-					sum_num[5]++;
-				}
-			}
-		}
-		else
-		{
-			if (meanpoints[i].x < x2)
+			if (meanpoints[i].x < x1)
 			{
 				if (meanpoints[i].y < y_0)
 				{
-
-					sum_x[2] += meanpoints[i].x;
-					sum_y[2] += meanpoints[i].y;
-					sum_num[2]++;
+					sum_x[3] += meanpoints[i].x;
+					sum_y[3] += meanpoints[i].y;
+					sum_num[3]++;
 				}
 				else
 				{
 					if (meanpoints[i].y < y2)
 					{
 
-						sum_x[8] += meanpoints[i].x;
-						sum_y[8] += meanpoints[i].y;
-						sum_num[8]++;
+						sum_x[4] += meanpoints[i].x;
+						sum_y[4] += meanpoints[i].y;
+						sum_num[4]++;
 					}
 					else
 					{
 
-						sum_x[6] += meanpoints[i].x;
-						sum_y[6] += meanpoints[i].y;
-						sum_num[6]++;
+						sum_x[5] += meanpoints[i].x;
+						sum_y[5] += meanpoints[i].y;
+						sum_num[5]++;
 					}
 				}
 			}
 			else
 			{
-				if (meanpoints[i].y < y_0)
+				if (meanpoints[i].x < x2)
 				{
-
-					sum_x[1] += meanpoints[i].x;
-					sum_y[1] += meanpoints[i].y;
-					sum_num[1]++;
-				}
-				else
-				{
-					if (meanpoints[i].y < y2)
+					if (meanpoints[i].y < y_0)
 					{
 
-						sum_x[0] += meanpoints[i].x;
-						sum_y[0] += meanpoints[i].y;
-						sum_num[0]++;
+						sum_x[2] += meanpoints[i].x;
+						sum_y[2] += meanpoints[i].y;
+						sum_num[2]++;
 					}
 					else
 					{
+						if (meanpoints[i].y < y2)
+						{
 
-						sum_x[7] += meanpoints[i].x;
-						sum_y[7] += meanpoints[i].y;
-						sum_num[7]++;
+							sum_x[8] += meanpoints[i].x;
+							sum_y[8] += meanpoints[i].y;
+							sum_num[8]++;
+						}
+						else
+						{
+
+							sum_x[6] += meanpoints[i].x;
+							sum_y[6] += meanpoints[i].y;
+							sum_num[6]++;
+						}
+					}
+				}
+				else
+				{
+					if (meanpoints[i].y < y_0)
+					{
+
+						sum_x[1] += meanpoints[i].x;
+						sum_y[1] += meanpoints[i].y;
+						sum_num[1]++;
+					}
+					else
+					{
+						if (meanpoints[i].y < y2)
+						{
+
+							sum_x[0] += meanpoints[i].x;
+							sum_y[0] += meanpoints[i].y;
+							sum_num[0]++;
+						}
+						else
+						{
+
+							sum_x[7] += meanpoints[i].x;
+							sum_y[7] += meanpoints[i].y;
+							sum_num[7]++;
+						}
 					}
 				}
 			}
 		}
-	}
+	
+	
 
 	for (int i = 0; i < 9; i++)
 	{
@@ -796,11 +817,11 @@ double Angle_sum(Mat dst)
 		}
 	}
 
-	for (int i = 0; i < MeanPoints.size(); i++)
+	/*for (int i = 0; i < MeanPoints.size(); i++)
 	{
 		circle(Meanpoint_image, MeanPoints[i], 2, Scalar(255, 255, 255), 2);
-circle(afm_src, MeanPoints[i], 2, Scalar(0, 0, 255), 2);
-	}
+		circle(afm_src, MeanPoints[i], 2, Scalar(0, 0, 255), 2);
+	}*/
 	//imshow("Mean Points", Meanpoint_image);
 	//imwrite("mean points.png", Meanpoint_image);
 	//imshow("src", afm_src);
@@ -819,15 +840,16 @@ circle(afm_src, MeanPoints[i], 2, Scalar(0, 0, 255), 2);
 			Angles.push_back(acos((((MeanPoints[i - 1].x - MeanPoints[i].x)*(MeanPoints[i + 1].x - MeanPoints[i].x) + (MeanPoints[i - 1].y - MeanPoints[i].y)*(MeanPoints[i + 1].y - MeanPoints[i].y)) / (sqrt(pow((MeanPoints[i - 1].x - MeanPoints[i].x), 2) + pow((MeanPoints[i - 1].y - MeanPoints[i].y), 2))*sqrt(pow((MeanPoints[i + 1].x - MeanPoints[i].x), 2) + pow((MeanPoints[i + 1].y - MeanPoints[i].y), 2))))) * 180 / 3.1415926);
 		}
 		Angles.push_back(acos((((MeanPoints[MeanPoints.size() - 2].x - MeanPoints.back().x)*(MeanPoints[0].x - MeanPoints.back().x) + (MeanPoints[MeanPoints.size() - 2].y - MeanPoints.back().y)*(MeanPoints[0].y - MeanPoints.back().y)) / (sqrt(pow((MeanPoints[MeanPoints.size() - 2].x - MeanPoints.back().x), 2) + pow((MeanPoints[MeanPoints.size() - 2].y - MeanPoints.back().y), 2))*sqrt(pow((MeanPoints[0].x - MeanPoints.back().x), 2) + pow((MeanPoints[0].y - MeanPoints.back().y), 2))))) * 180 / 3.1415926);
+		
 		for (int i = 0; i < Angles.size(); i++)
-		{
-			cout << "the " << i << " angle degree is: " << Angles[i] << endl;
-		}
+			{
+				cout << "the " << i << " angle degree is: " << Angles[i] << endl;
+			}
 		double angle_sum = 0;
 		for (int i = 0; i < Angles.size(); i++)
-		{
-			angle_sum += Angles[i];
-		}
+			{
+				angle_sum += Angles[i];
+			}
 		return angle_sum;
 	}
 	else
@@ -1046,35 +1068,26 @@ int Count_location(Mat dst)
 	Mat imageContours = Mat::zeros(dst.size(), CV_8UC1);
 	Mat Contours = Mat::zeros(dst.size(), CV_8UC1);
 	Mat Separated = Mat::zeros(dst.size(), CV_8UC1);
-	for (int i = 0; i < contours.size(); i++)
-	{
-		for (int j = 0; j < contours[i].size(); j++)
-		{
-			Point P = Point(contours[i][j].x, contours[i][j].y);
-			Contours.at<uchar>(P) = 255;
-		}
-		drawContours(imageContours, contours, i, Scalar(255), 1, 8, hierarchy);
-	}
 
 	for (int i = 1; i < contours.size(); i++)
-	{
-		cout << "the size of " << i << " contour is: " << contours[i].size() << endl;
-		int sum_x = 0;
-		int sum_y = 0;
-		Point meanpoint;
-		for (int j = 0; j < contours[i].size(); j++)
 		{
-			sum_x += contours[i][j].x;
-			sum_y += contours[i][j].y;
+			cout << "the size of " << i << " contour is: " << contours[i].size() << endl;
+			int sum_x = 0;
+			int sum_y = 0;
+			Point meanpoint;
+			for (int j = 0; j < contours[i].size(); j++)
+			{
+				sum_x += contours[i][j].x;
+				sum_y += contours[i][j].y;
+			}
+			meanpoint = Point(sum_x / contours[i].size(), sum_y / contours[i].size());
+			if (contours[i].size() > 10)
+			{
+				meanpoints.push_back(meanpoint);
+			}
+			else continue;
 		}
-		meanpoint = Point(sum_x / contours[i].size(), sum_y / contours[i].size());
-		if (contours[i].size() > 10)
-		{
-			meanpoints.push_back(meanpoint);
-		}
-		else continue;
-	}
-
+	
 	{
 		y_0 = dst.rows / 3;
 		y2 = dst.rows * 2 / 3;
@@ -1115,93 +1128,92 @@ int Count_location(Mat dst)
 	int sum_num[9] = { 0,0,0,0,0,0,0,0,0 };
 
 	for (int i = 0; i < meanpoints.size(); i++)
-	{
-		if (meanpoints[i].x < x1)
 		{
-			if (meanpoints[i].y < y_0)
-			{
-				sum_x[3] += meanpoints[i].x;
-				sum_y[3] += meanpoints[i].y;
-				sum_num[3]++;
-			}
-			else
-			{
-				if (meanpoints[i].y < y2)
-				{
-
-					sum_x[4] += meanpoints[i].x;
-					sum_y[4] += meanpoints[i].y;
-					sum_num[4]++;
-				}
-				else
-				{
-
-					sum_x[5] += meanpoints[i].x;
-					sum_y[5] += meanpoints[i].y;
-					sum_num[5]++;
-				}
-			}
-		}
-		else
-		{
-			if (meanpoints[i].x < x2)
+			if (meanpoints[i].x < x1)
 			{
 				if (meanpoints[i].y < y_0)
 				{
-
-					sum_x[2] += meanpoints[i].x;
-					sum_y[2] += meanpoints[i].y;
-					sum_num[2]++;
+					sum_x[3] += meanpoints[i].x;
+					sum_y[3] += meanpoints[i].y;
+					sum_num[3]++;
 				}
 				else
 				{
 					if (meanpoints[i].y < y2)
 					{
 
-						sum_x[8] += meanpoints[i].x;
-						sum_y[8] += meanpoints[i].y;
-						sum_num[8]++;
+						sum_x[4] += meanpoints[i].x;
+						sum_y[4] += meanpoints[i].y;
+						sum_num[4]++;
 					}
 					else
 					{
 
-						sum_x[6] += meanpoints[i].x;
-						sum_y[6] += meanpoints[i].y;
-						sum_num[6]++;
+						sum_x[5] += meanpoints[i].x;
+						sum_y[5] += meanpoints[i].y;
+						sum_num[5]++;
 					}
 				}
 			}
 			else
 			{
-				if (meanpoints[i].y < y_0)
+				if (meanpoints[i].x < x2)
 				{
-
-					sum_x[1] += meanpoints[i].x;
-					sum_y[1] += meanpoints[i].y;
-					sum_num[1]++;
-				}
-				else
-				{
-					if (meanpoints[i].y < y2)
+					if (meanpoints[i].y < y_0)
 					{
 
-						sum_x[0] += meanpoints[i].x;
-						sum_y[0] += meanpoints[i].y;
-						sum_num[0]++;
+						sum_x[2] += meanpoints[i].x;
+						sum_y[2] += meanpoints[i].y;
+						sum_num[2]++;
 					}
 					else
 					{
+						if (meanpoints[i].y < y2)
+						{
 
-						sum_x[7] += meanpoints[i].x;
-						sum_y[7] += meanpoints[i].y;
-						sum_num[7]++;
+							sum_x[8] += meanpoints[i].x;
+							sum_y[8] += meanpoints[i].y;
+							sum_num[8]++;
+						}
+						else
+						{
+
+							sum_x[6] += meanpoints[i].x;
+							sum_y[6] += meanpoints[i].y;
+							sum_num[6]++;
+						}
+					}
+				}
+				else
+				{
+					if (meanpoints[i].y < y_0)
+					{
+
+						sum_x[1] += meanpoints[i].x;
+						sum_y[1] += meanpoints[i].y;
+						sum_num[1]++;
+					}
+					else
+					{
+						if (meanpoints[i].y < y2)
+						{
+
+							sum_x[0] += meanpoints[i].x;
+							sum_y[0] += meanpoints[i].y;
+							sum_num[0]++;
+						}
+						else
+						{
+
+							sum_x[7] += meanpoints[i].x;
+							sum_y[7] += meanpoints[i].y;
+							sum_num[7]++;
+						}
 					}
 				}
 			}
 		}
-	}
-
-
+	
 	vector<int> location;
 	for (int i = 0; i < 9; i++)
 	{
@@ -1214,71 +1226,5 @@ int Count_location(Mat dst)
 			location.push_back(i);
 		}
 	}
-	for (int i = 0; i < MeanPoints.size(); i++)
-	{
-		circle(Meanpoint_image, MeanPoints[i], 2, Scalar(255, 255, 255), 2);
-		circle(afm_src, MeanPoints[i], 2, Scalar(0, 0, 255), 2);
-	}
 	return location.size();
 }
-
-
-/*double **res;
-for (int i = 0; i < 3; i++)
-{
-res = new double*[3];
-for (int j = 0; j < 3; j++)
-{
-res[j] = new double[3];
-}
-}
-double **srr;
-for (int i = 0; i < 3; i++)
-{
-srr = new double*[3];
-for (int j = 0; j < 3; j++)
-{
-srr[j] = new double[3];
-}
-}
-
-for (int i = 0; i < 3; i++)
-{
-for (int j = 0; j < 3; j++)
-{
-cout << srr[i][j] << " ";
-}
-cout << endl;
-}
-GetMatrixInverse(srr,3, res);
-
-for (int i = 0; i < 3; i++)
-{
-for (int j = 0; j < 3; j++)
-{
-cout << res[i][j] << " ";
-}
-cout << endl;
-}*/
-//Mat test = dst.clone();
-//resize(dst, test, cv::Size(56, 56));
-//imshow("test", test);
-//Mat imm = imread("\images\\Optical_image.png");
-//resize(imm, imm, cv::Size(830, 700));
-//imshow("source", imm);
-//for (int i = 0;i<dst.rows;i++)
-//{
-//	for (int j = 0; j < dst.cols; j++)
-//	{
-//		if (int(dst.at<uchar>(i, j)) > max/2+20)//*2/3)//ȡ������ص�0.5+20��Ϊ��ֵ
-//		{
-//			dst.at<uchar>(i, j) = 255;
-//		}
-//		else
-//		{
-//			dst.at<uchar>(i, j) = 0;
-//		}
-//		//cout << int(dst.at<uchar>(i, j)) << " ";
-//	}
-//	//cout << endl;
-//}
