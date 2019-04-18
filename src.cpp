@@ -9,8 +9,11 @@ using namespace std;
 using namespace cv;
 
 //parameters of judge function
-int const k1 = 10;
-int const k2 = 20000;
+int const k1 = 8;//least size of contours
+int const k2 = 24;//binarizate threshold
+int const k3 = 200;//angle_diff
+int const k4 = 100;//first parameter of P
+int const k5 = 10;//second parameter of P
 
 Mat afm_src, Optical_src, Optical_dst;
 Mat src, dst_gray, afm_dst;
@@ -26,7 +29,7 @@ double Similarity(Mat image_r, int size_r, Mat image_s, int size_s);
 double getA(double** arcs, int n);
 void  getAStart(double** arcs, int n, double** ans);
 bool GetMatrixInverse(double** src, int n, double** des);
-double P(int *center_area, Mat image_a, Mat image_b, int size,int len);
+double P(int *center_area, Mat image_a, Mat image_b, int size,int len,double angle_diff);
 double Angle_sum(Mat dst);
 int *Center_area(Mat dst);
 int Count_location(Mat dst);
@@ -34,12 +37,12 @@ int Count_location(Mat dst);
 
 int main()
 {
-	/*Mat a = imread("afm_two.png", 0);
-	Mat b = imread("Optical_2.png", 0);
-	int count_location = Count_location(a);
-	cout << P(Center_area(a), a, b, 56,count_location)<<endl;
-	waitKey(0);*/
-	afm_src = imread("\images\\Ellipse_gray.png");
+	//Mat a = imread("afm_two.png", 0);
+	//Mat b = imread("ellipse_two.png", 0);
+	////int count_location = Count_location(a);
+	//cout << Angle_sum(b)<<endl;
+	//waitKey(0);
+	afm_src = imread("\images\\Triangle_gray.png");
 	Optical_src = imread("\images\\Optical_image.png");
 	flip(afm_src,afm_src, 1);
 	//GaussianBlur(dst, dst, Size(7, 7), 0, 0);
@@ -67,8 +70,8 @@ int main()
 	minMaxIdx(afm_dst, afm_minp, afm_maxp);
 	minMaxIdx(Optical_dst, optical_minp, optical_maxp);
 
-	threshold(afm_dst, afm_dst, afm_max / 2 + 24, 255, CV_THRESH_BINARY);
-	threshold(Optical_dst, Optical_dst, optical_max / 2 + 24, 255, CV_THRESH_BINARY);
+	threshold(afm_dst, afm_dst, afm_max / 2 + k2, 255, CV_THRESH_BINARY);
+	threshold(Optical_dst, Optical_dst, optical_max / 2 + k2, 255, CV_THRESH_BINARY);
 
 
 	imshow("two value", afm_dst);
@@ -77,7 +80,7 @@ int main()
 
 	vector<Point> Matching_center;
 	vector<double> Score;
-	for(int j=0;j<600;j+=2)
+	for(int j=0;j<500;j+=2)
 	{
 		for(int i=0;i<700;i+=2)
 		{
@@ -86,27 +89,36 @@ int main()
 			{
 				double angle_diff=abs(Angle_sum(Optical_dst(rect))-Angle_sum(afm_dst));
 				Point p;
-				if(angle_diff==0)
+				if(angle_diff<k3)
 				{
-					int *a;
+					int *a,*b;
 					int count_location = Count_location(afm_dst);
 					a = Center_area(afm_dst);
-					Score.push_back(P(Center_area(afm_dst), afm_dst, Optical_dst(rect), 56, count_location));
-					p.x=i+27;
-					p.y=j+27;
-					Matching_center.push_back(p);
+					b = Center_area(Optical_dst(rect));
+					bool is_samearea=true;
+					for (int u = 0; u < count_location; u++)
+					{
+						if (a[u] != b[u]) is_samearea = false;
+					}
+					if (is_samearea)
+					{
+						Score.push_back(P(Center_area(afm_dst), afm_dst, Optical_dst(rect), 56, count_location,angle_diff));
+						p.x = i + 27;
+						p.y = j + 27;
+						Matching_center.push_back(p);
+					}
 				}
 			}
 		}
 	}
-	double min_score=Score[0];
-	int min_index=0;
+	double max_score=Score[0];
+	int max_index=0;
 	for(int i=0;i<Score.size();i++)
 	{
-		if (Score[i] < min_score)
+		if (Score[i] > max_score)
 		{
-			min_score = Score[i];
-			min_index = i;
+			max_score = Score[i];
+			max_index = i;
 		}
 	}
 	
@@ -116,11 +128,11 @@ int main()
 		cout << "the score is: " << Score[i] << endl;
 	}
 
-	circle(Optical_src, Matching_center[min_index], 2, Scalar(0, 0, 255), 2);
-	rectangle(Optical_src, Point(Matching_center[min_index].x-27, Matching_center[min_index].y-27), Point(Matching_center[min_index].x + 27, Matching_center[min_index].y + 27), Scalar(0, 0, 255), 1, 8, 0);
+	circle(Optical_src, Matching_center[max_index], 2, Scalar(0, 0, 255), 2);
+	rectangle(Optical_src, Point(Matching_center[max_index].x-27, Matching_center[max_index].y-27), Point(Matching_center[max_index].x + 27, Matching_center[max_index].y + 27), Scalar(0, 0, 255), 1, 8, 0);
 
 	imshow("optical_dst", Optical_src);
-	imwrite("Matching result2.png", Optical_src);
+	imwrite("Matching result5.png", Optical_src);
 
 	waitKey(0);
 	return 0;
@@ -272,7 +284,7 @@ double Similarity(Mat image_r, int size_r, Mat image_s, int size_s)
 	}
 	if (num_a == 0)
 	{
-		return 10;
+		return 100;
 	}
 	cout << "num_a: " << num_a << endl;
 	int  ** zr;
@@ -344,7 +356,7 @@ double Similarity(Mat image_r, int size_r, Mat image_s, int size_s)
 	}
 	if (num_b == 0)
 	{
-		return 10;
+		return 100;
 	}
 	cout << "num_b: " << num_b << endl;
 	int  ** zs;
@@ -549,7 +561,7 @@ bool GetMatrixInverse(double** src, int n, double** des)
 }
 
 
-double P(int *center_area,Mat image_a,Mat image_b,int size,int len)
+double P(int *center_area,Mat image_a,Mat image_b,int size,int len,double angle_diff)
 {
 	cout << "len size is: " << len << endl;
 	int s = size / 3;
@@ -613,9 +625,15 @@ double P(int *center_area,Mat image_a,Mat image_b,int size,int len)
 		{
 			area_sum += score_sim[i];
 		}
-	
-	
-	return area_sum/score_sim.size();
+	if (angle_diff < 1) {
+		double final_score = 100 +k5 / (area_sum / score_sim.size());
+		return final_score;
+	}
+	else
+	{
+		double final_score = k4 / angle_diff + k5 / (area_sum / score_sim.size());
+		return final_score;
+	}
 }
 
 
@@ -625,6 +643,9 @@ double Angle_sum(Mat dst)
 	vector<vector<Point>> contours;
 	vector<Vec4i> hierarchy;
 	vector<Point> meanpoints;
+
+	//meanpoints.resize(3, Point(100, 100));///////////////////////////////////////////////////////////
+
 
 	findContours(dst, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point());
 	Mat imageContours = Mat::zeros(dst.size(), CV_8UC1);
@@ -660,7 +681,7 @@ double Angle_sum(Mat dst)
 				sum_y += contours[i][j].y;
 			}
 			meanpoint = Point(sum_x / contours[i].size(), sum_y / contours[i].size());
-			if (contours[i].size() > 8)
+			if (contours[i].size() > k1)
 			{
 				meanpoints.push_back(meanpoint);
 			}
@@ -703,6 +724,7 @@ double Angle_sum(Mat dst)
 
 	///////////////////////////////////////computer the center
 	vector<Point> MeanPoints;
+	//MeanPoints.resize(3, Point(100, 100));//////////////////////////////////////////////////
 
 	y_0 = dst.rows / 3;
 	y2 = dst.rows * 2 / 3;
@@ -830,6 +852,7 @@ double Angle_sum(Mat dst)
 
 	////////////////////////////////compute the angles
 	vector<float> Angles;
+	Angles.resize(1, 1);////////////////////////////////////////////////////
 
 	if (MeanPoints.size() > 2)
 	{
@@ -865,19 +888,13 @@ int *Center_area(Mat dst)
 	vector<vector<Point>> contours;
 	vector<Vec4i> hierarchy;
 	vector<Point> meanpoints;
+	meanpoints.resize(1, Point(100, 100));
+
 	findContours(dst, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point());
 	Mat imageContours = Mat::zeros(dst.size(), CV_8UC1);
 	Mat Contours = Mat::zeros(dst.size(), CV_8UC1);
 	Mat Separated = Mat::zeros(dst.size(), CV_8UC1);
-	for (int i = 0; i < contours.size(); i++)
-	{
-		for (int j = 0; j < contours[i].size(); j++)
-		{
-			Point P = Point(contours[i][j].x, contours[i][j].y);
-			Contours.at<uchar>(P) = 255;
-		}
-		drawContours(imageContours, contours, i, Scalar(255), 1, 8, hierarchy);
-	}
+	
 
 	for (int i = 1; i < contours.size(); i++)
 	{
@@ -891,7 +908,7 @@ int *Center_area(Mat dst)
 			sum_y += contours[i][j].y;
 		}
 		meanpoint = Point(sum_x / contours[i].size(), sum_y / contours[i].size());
-		if (contours[i].size() > 10)
+		if (contours[i].size() > k1)
 		{
 			meanpoints.push_back(meanpoint);
 		}
@@ -926,6 +943,7 @@ int *Center_area(Mat dst)
 
 	///////////////////////////////////////computer the center
 	vector<Point> MeanPoints;
+	MeanPoints.resize(1, Point(100, 100));
 	y_0 = dst.rows / 3;
 	y2 = dst.rows * 2 / 3;
 	y3 = dst.rows - 1;
@@ -1037,13 +1055,8 @@ int *Center_area(Mat dst)
 			location.push_back(i);
 		}
 	}
-	for (int i = 0; i < MeanPoints.size(); i++)
-	{
-		circle(Meanpoint_image, MeanPoints[i], 2, Scalar(255, 255, 255), 2);
-		circle(afm_src, MeanPoints[i], 2, Scalar(0, 0, 255), 2);
-	}
-	imshow("Mean Points", Meanpoint_image);
-	cout << "location size: " << location.size() << endl;
+	
+	
 	int *center_area;
 	if (location.size() != 0)
 	{
@@ -1064,6 +1077,8 @@ int Count_location(Mat dst)
 	vector<vector<Point>> contours;
 	vector<Vec4i> hierarchy;
 	vector<Point> meanpoints;
+	meanpoints.resize(1, Point(100, 100));
+
 	findContours(dst, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point());
 	Mat imageContours = Mat::zeros(dst.size(), CV_8UC1);
 	Mat Contours = Mat::zeros(dst.size(), CV_8UC1);
@@ -1081,7 +1096,7 @@ int Count_location(Mat dst)
 				sum_y += contours[i][j].y;
 			}
 			meanpoint = Point(sum_x / contours[i].size(), sum_y / contours[i].size());
-			if (contours[i].size() > 10)
+			if (contours[i].size() > k1)
 			{
 				meanpoints.push_back(meanpoint);
 			}
@@ -1116,6 +1131,8 @@ int Count_location(Mat dst)
 
 	///////////////////////////////////////computer the center
 	vector<Point> MeanPoints;
+	MeanPoints.resize(1, Point(100, 100));
+
 	y_0 = dst.rows / 3;
 	y2 = dst.rows * 2 / 3;
 	y3 = dst.rows - 1;
