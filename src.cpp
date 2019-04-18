@@ -9,7 +9,7 @@ using namespace std;
 using namespace cv;
 
 //parameters of judge function
-int const k1 = 8;//least size of contours
+int const k1 = 5;//least size of contours
 int const k2 = 24;//binarizate threshold
 int const k3 = 200;//angle_diff
 int const k4 = 100;//first parameter of P
@@ -42,7 +42,7 @@ int main()
 	////int count_location = Count_location(a);
 	//cout << Angle_sum(b)<<endl;
 	//waitKey(0);
-	afm_src = imread("\images\\Triangle_gray.png");
+	afm_src = imread("\images\\Ellipse_gray.png");
 	Optical_src = imread("\images\\Optical_image.png");
 	flip(afm_src,afm_src, 1);
 	//GaussianBlur(dst, dst, Size(7, 7), 0, 0);
@@ -132,7 +132,7 @@ int main()
 	rectangle(Optical_src, Point(Matching_center[max_index].x-27, Matching_center[max_index].y-27), Point(Matching_center[max_index].x + 27, Matching_center[max_index].y + 27), Scalar(0, 0, 255), 1, 8, 0);
 
 	imshow("optical_dst", Optical_src);
-	imwrite("Matching result5.png", Optical_src);
+	imwrite("Matching result10.png", Optical_src);
 
 	waitKey(0);
 	return 0;
